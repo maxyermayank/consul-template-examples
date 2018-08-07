@@ -1,0 +1,3 @@
+{{ $ENVIRONMENT_NAME := env "APP_ENVIRONMENT" }}## {{$ENVIRONMENT_NAME}}
+{{ range tree (print $ENVIRONMENT_NAME "/config") }}
+{{ .Key }}={{ .Value }}{{ end }}

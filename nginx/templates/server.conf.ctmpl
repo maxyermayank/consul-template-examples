@@ -1,0 +1,60 @@
+server {
+
+    listen                       $IP:443 ssl default_server;
+    server_name                  api.yourdomain.com;
+    underscores_in_headers       on;
+    client_max_body_size         5g;
+
+    status_zone                  upstream-backend;
+
+    if ($request_method = 'OPTIONS') {
+        return 200;
+    }
+
+    add_header                   Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header                   X-Frame-Options "DENY";
+
+    add_header                   'Access-Control-Allow-Origin' $cors_origin always;
+
+    add_header                   'Access-Control-Allow-Credentials' 'true' always;
+    add_header                   'Access-Control-Allow-Methods' 'POST, GET, PUT, DELETE, OPTIONS' always;
+    add_header                   'Access-Control-Allow-Headers' 'Origin, X-Requested-With, Content-Type, Accept, Referer, User-Agent, Authorization, access_token, x-p2p-simulate, fileContentType, fileName, userId, email, Content-Disposition' always;
+    add_header                   'Access-Control-Expose-Headers' 'Content-Disposition' always;
+
+    proxy_next_upstream          error timeout invalid_header http_500;
+    proxy_connect_timeout        2;
+    proxy_set_header             Host $host;
+    proxy_set_header             X-Real-IP $remote_addr;
+    proxy_set_header             X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    ssl_certificate              /usr/local/etc/keystore/mpatel.yourdomain.com.leaf-intermediate.crt;
+    ssl_certificate_key          /usr/local/etc/keystore/mpatel.yourdomain.com.noenc.key;
+
+    ssl_session_cache   shared:SSL:40m;
+    ssl_session_timeout 4h;
+
+    ssl_protocols                TLSv1.1 TLSv1.2;
+    ssl_ciphers DES-CBC3-SHA:ECDH+AESGCM:ECDH+AES256:ECDH+AES128:DH+3DES:!ADH:!AECDH:!MD5;
+    ssl_prefer_server_ciphers    on;
+
+    server_tokens off;
+
+    {{range services}} {{$name := .Name}}
+    location /{{$name}}/version {
+        proxy_pass https://{{$name}}/version;
+        health_check fails=3 passes=3;
+    }
+
+    location /internal/{{$name}} {
+        include /etc/nginx/conf.d/internal_access_only;
+        proxy_pass https://{{$name}}/internal/{{$name}};
+        health_check fails=3 passes=3;
+    }
+
+    location /{{$name}} {
+        proxy_pass https://{{$name}}/{{$name}};
+        health_check fails=3 passes=3;
+    }
+    {{end}}
+
+}

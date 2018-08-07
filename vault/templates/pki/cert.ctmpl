@@ -1,0 +1,3 @@
+{{- /* ./vault/templates/cert.ctmpl */ -}}
+{{ with secret "pki-int/issue/cert-generator" "common_name=mpatel.yourdomain.com" }}
+{{ .Data.certificate }}{{ end }}
